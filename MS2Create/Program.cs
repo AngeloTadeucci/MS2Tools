@@ -100,8 +100,8 @@ internal class Program {
     }
 
     private static (string FullPath, string RelativePath)[] GetFilesRelative(string path) {
-        if (!path.EndsWith('\\')) {
-            path += '\\';
+        if (!path.EndsWith(Path.DirectorySeparatorChar)) {
+            path += Path.DirectorySeparatorChar;
         }
 
         string[] files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
