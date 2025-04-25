@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using MiscUtils;
+using MiscUtils.Logging;
 using MS2Lib;
 using Logger = MiscUtils.Logging.SimpleLogger;
 using LogMode = MiscUtils.Logging.LogMode;
@@ -21,10 +22,13 @@ internal class Program {
     private static readonly StreamWriter StreamWriter = new StreamWriter("output.log");
 #endif
 
-    static async Task Main(string[] commandLineArgs) {
+    private static async Task Main(string[] commandLineArgs) {
 #if DEBUG
-        static void Out(string format, object[] args) => StreamWriter.WriteLine(args == null ? format : string.Format(format, args));
-        Logger.Out = MiscUtils.Logging.DebugLogger.Out = Out;
+        static void Out(string format, object[] args) {
+            StreamWriter.WriteLine(args == null ? format : string.Format(format, args));
+        }
+
+        Logger.Out = DebugLogger.Out = Out;
         Logger.LoggingLevel = LogMode.Debug;
 #else
         Logger.LoggingLevel = LogMode.Warning;
@@ -54,7 +58,6 @@ internal class Program {
             await CreateArchive(_sourcePath, _destinationPath);
         } catch (Exception ex) {
             Logger.Error(ex);
-            return;
         }
     }
 
@@ -69,8 +72,8 @@ internal class Program {
             throw new Exception($"Directory doesn't exist \"{sourcePath}\".");
         }
 
-        var filePaths = GetFilesRelative(sourcePath);
-        MS2File[] files = new MS2File[filePaths.Length];
+        (string FullPath, string RelativePath)[] filePaths = GetFilesRelative(sourcePath);
+        var files = new MS2File[filePaths.Length];
         var tasks = new Task[filePaths.Length];
         IMS2Archive archive = new MS2Archive(Repositories.Repos[_cryptoMode]);
 
@@ -85,7 +88,7 @@ internal class Program {
     }
 
     private static void AddAndCreateFileToArchive(IMS2Archive archive, (string fullPath, string relativePath)[] filePaths, uint index) {
-        var (filePath, relativePath) = filePaths[index];
+        (string filePath, string relativePath) = filePaths[index];
 
         uint id = index + 1;
         FileStream fsFile = File.OpenRead(filePath);
@@ -111,13 +114,14 @@ internal class Program {
         return result;
     }
 
-    private static CompressionType GetCompressionTypeFromFileExtension(string filePath, CompressionType defaultCompressionType = CompressionType.Zlib) =>
-        Path.GetExtension(filePath) switch {
+    private static CompressionType GetCompressionTypeFromFileExtension(string filePath, CompressionType defaultCompressionType = CompressionType.Zlib) {
+        return Path.GetExtension(filePath) switch {
             ".png" => CompressionType.Png,
             ".usm" => CompressionType.Usm,
             ".zlib" => CompressionType.Zlib,
             _ => defaultCompressionType,
         };
+    }
 
     private static void DisplayArgsHelp() {
         var sb = new StringBuilder();
